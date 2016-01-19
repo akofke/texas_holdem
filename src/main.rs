@@ -2,6 +2,7 @@ extern crate rand;
 
 use std::fmt;
 use rand::{thread_rng, Rng};
+use std::io;
 
 const SUITS: [Suit; 4] = [Suit::Spade, Suit::Heart, Suit::Diamond, Suit::Club];
 
@@ -30,8 +31,60 @@ struct Card {
     suit: Suit,
 }
 
+#[derive(Debug)]
 struct Deck {
     cards: Vec<Card>,
+}
+
+#[derive(Debug)]
+struct Player {
+    id: String,
+    hand: Vec<Card>,
+    // folded, cash, bet
+}
+
+impl Player {
+    fn new(id: String) -> Player {
+        Player {
+            id: id,
+            hand: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct Game {
+    players: Vec<Player>,
+    deck: Deck,
+    community_cards: Vec<Card>,
+    // pot
+}
+
+impl Game {
+    fn new(num_players: usize) -> Game {
+        let mut players = Vec::with_capacity(num_players);
+        for i in 0..num_players {
+            players.push(Player::new(format!("Player {}", i)));
+        }
+
+        let mut deck = Deck::new();
+        deck.shuffle();
+
+        Game {
+            players: players,
+            deck: deck,
+            community_cards: Vec::new(),
+        }
+    }
+    
+    fn deal(&mut self, num_cards: u8) {
+        for _ in 0..num_cards {
+            for player in self.players {
+                player.hand.push(self.deck.pop());
+            }
+        }
+    }
+
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -99,15 +152,40 @@ impl Deck {
         let mut rng = thread_rng();
         rng.shuffle(&mut self.cards[..]);
     }        
+
+    fn pop(&mut self) -> Card {
+        return self.cards.pop().unwrap();
+    }
 }
 
 
 fn main() {
-    let mut deck = Deck::new();
-    deck.shuffle();
+    let game = start_game();
+    println!("{:#?}", game);
+    
+}
 
-    for card in deck.cards {
-        println!("{}", card);
+fn start_game() -> Game {
+    println!("Welcome to Texas Hold 'em, please input the number of players (2-8):");
+    let mut num_players = String::new();
+    loop {
+        io::stdin()
+            .read_line(&mut num_players)
+            .ok()
+            .expect("Failed to read line");
+
+        let num_players: usize = match num_players.trim().parse() {
+            Ok(num) if num > 1 && num < 9 => num,
+            Ok(_) => {
+                println!("Please choose a number between 2 and 8");
+                continue;
+            },
+            Err(_) => {
+                println!("Please input a number");
+                continue
+            },
+        };
+
+        return Game::new(num_players);
     }
-
 }
